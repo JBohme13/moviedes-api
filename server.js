@@ -5,9 +5,9 @@ const helmet = require('helmet')
 const cors = require('cors')
 const STORE = require('./STORE')
 
-app = express()
-
-app.use(morgan('dev'))
+const app = express()
+const morganSetting = process.env.NODE_ENV === 'production' ? 'tiny' : 'comon';
+app.use(morgan(morganSetting))
 app.use(helmet())
 app.use(cors())
 
@@ -23,7 +23,7 @@ app.use(function handleAuth(req, res, next) {
 })
 
 function handleMovieRequest(req, res) {
-    const { genre, country, avgVote} = req.query;
+    const { genre, country, avg_vote} = req.query;
 
     let movies = STORE;
 
@@ -50,8 +50,8 @@ function handleMovieRequest(req, res) {
         })
     }
 
-    if(avgVote) {
-        movies = movies.filter(movie => movie.avg_vote >= parseInt(avgVote))
+    if(avg_vote) {
+        movies = movies.filter(movie => movie.avg_vote >= parseInt(avg_vote))
                  .sort((a, b) => {
                      return a['avg_vote'] < b['avg_vote'] ? 1 : a['avg_vote'] > b['avg_vote'] ? -1 : 0;
                  })
@@ -62,7 +62,17 @@ function handleMovieRequest(req, res) {
 
 app.get('/movie', handleMovieRequest)
 
-const PORT = 8001
+app.use((error, req, res, next) => {
+    let response
+    if( process.env.NODE_ENV === 'production'){
+        response = {error: {message: 'Server error'}}
+    } else {
+        response = {error}
+    }
+    res.status(500).json(response)
+})
+
+const PORT = process.env.PORT || 8001
 
 app.listen(PORT, () => {
     console.log('server is listening on port ${PORT}')
